@@ -2,9 +2,12 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Dependencies first for better layer caching
+# Dependencies first for better layer caching.
+# Using `npm install` (not `npm ci`) to tolerate lock-file drift between
+# the developer's local npm version and the container's, which happens
+# when newer transitive deps (e.g. esbuild 0.28) get pulled in.
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm install --no-audit --no-fund --omit=optional=false
 
 # Source + build
 COPY . .
