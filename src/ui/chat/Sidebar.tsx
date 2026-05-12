@@ -1,5 +1,4 @@
 import { useStore } from '@/store';
-import { Footer } from './Footer';
 
 export function Sidebar() {
   const conversations = useStore((s) => s.conversations);
@@ -56,7 +55,6 @@ export function Sidebar() {
           ⚙ 设置
         </button>
       </div>
-      <Footer />
     </aside>
   );
 }

@@ -3,8 +3,8 @@ import type { JSONSchema7 } from '@/tools/json-schema';
 export type ProviderProtocol = 'openai' | 'anthropic';
 
 // Codex-style effort levels (low / medium / high / xhigh) + off.
-// `xhigh` is a Codex extension beyond OpenAI's official enum
-// (`minimal/low/medium/high`); supported by many OpenAI-compatible proxies.
+// xhigh is a Codex/proxy extension beyond OpenAI's official enum,
+// supported by many OpenAI-compatible proxies.
 export type ThinkingLevel = 'off' | 'low' | 'medium' | 'high' | 'xhigh';
 
 export const THINKING_LEVELS: ReadonlyArray<{ id: ThinkingLevel; label: string; note: string }> = [
