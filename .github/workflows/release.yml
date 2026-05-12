@@ -132,6 +132,10 @@ jobs:
 
       - run: npm install --no-audit --no-fund
 
+      - name: Generate Tauri platform icons (ico / icns / multi-PNG)
+        shell: bash
+        run: npx --yes @tauri-apps/cli@latest icon src-tauri/icons/icon.png -o src-tauri/icons
+
       - name: Build Tauri bundles
         uses: tauri-apps/tauri-action@v0
         env:

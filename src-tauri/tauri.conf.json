@@ -27,7 +27,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "Browser-side AI agent platform",
     "longDescription": "BYO-key multi-provider AI agent that runs entirely client-side. Connect to any OpenAI-compatible or Anthropic-native endpoint, with web search, document reading, multi-modal input, and live thinking display."
