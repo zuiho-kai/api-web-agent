@@ -13,6 +13,8 @@
 
 ## 亮点
 
+<img width="1920" height="878" alt="image" src="https://github.com/user-attachments/assets/1a889eff-3c23-4aa8-ac33-f8f1d7406baa" />
+
 - **双 adapter + 自动路由**：model 名前缀 `claude-*` 走 Anthropic `/v1/messages`（原生 tool_use SSE、`cache_control` 缓存、extended thinking budget）；其余（`gpt-*` / `grok-*` / `deepseek-*` / `kimi-*` / `qwen-*` ...）走 OpenAI `/v1/chat/completions`（`tool_calls.delta` 累积、`reasoning_effort` 含 Codex 扩展 `xhigh`）。
 - **客户端 function calling** —— 工具实现完全在你浏览器里，不依赖各家 hosted tools。
 - **内置 3 类工具，零额外 key**：
