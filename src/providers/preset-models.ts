@@ -29,3 +29,27 @@ export const PRESET_MODELS: PresetModel[] = [
 export function findPreset(modelId: string): PresetModel | undefined {
   return PRESET_MODELS.find((m) => m.id === modelId);
 }
+
+/**
+ * Whether the model can read images (image_url / image content blocks).
+ * Used to gate image attachments and PDF→image fallback.
+ */
+export function isVisionCapable(model: string): boolean {
+  if (!model) return false;
+  return (
+    /^claude-/i.test(model) ||                  // All Claude 4.x are multimodal
+    /^gpt-(4o|4-vision|4\.1|5)/i.test(model) || // GPT-4o, GPT-4-vision, GPT-4.1, GPT-5.x
+    /^o\d/i.test(model) ||                      // o1 / o3 / o4 reasoning models
+    /^gemini-/i.test(model) ||                  // All Gemini are multimodal
+    /^grok-4/i.test(model) ||                   // Grok 4 family (multimodal)
+    /vision/i.test(model)                       // generic "vision" hint
+  );
+}
+
+/**
+ * Whether the model accepts raw PDF bytes via Anthropic-style `document` block.
+ * Currently only Claude (Anthropic native protocol) supports this.
+ */
+export function supportsNativePDF(model: string): boolean {
+  return /^claude-/i.test(model);
+}

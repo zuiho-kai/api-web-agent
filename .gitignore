@@ -10,3 +10,6 @@ dist-ssr
 .DS_Store
 *.log
 *.tsbuildinfo
+
+# Local sample inputs for ad-hoc testing — never commit user data.
+输入样本/

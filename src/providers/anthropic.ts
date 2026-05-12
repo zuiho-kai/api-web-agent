@@ -273,6 +273,8 @@ function toAnthropicMessages(
             } else {
               blocks.push({ type: 'image', source: { type: 'url', url } });
             }
+          } else if (b.type === 'document') {
+            blocks.push({ type: 'document', source: b.source });
           } else if (b.type === 'tool_result') {
             blocks.push({
               type: 'tool_result',

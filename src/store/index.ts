@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import type { ChatContentBlock, ChatMessage, ProviderConfig } from '@/providers/base';
 import { buildAdapter } from '@/providers/router';
+import { isVisionCapable, supportsNativePDF } from '@/providers/preset-models';
 import { runAgent, type AgentEvent } from '@/agent/loop';
 import { createDefaultRegistry } from '@/tools/builtin';
 import { chatMode } from '@/modes/chat';
 import { parseDocument, type ParsedDocument } from '@/runtime/doc-parsers';
+import { fileToBase64, renderPdfPagesAsImages } from '@/runtime/doc-parsers/pdf';
 import {
   appendMessage,
   createConversation,
@@ -114,33 +116,102 @@ export const useStore = create<AppState>((set, get) => ({
       set((s) => ({ conversations: [c, ...s.conversations], activeId: c.id }));
     }
 
-    // Parse attachments
+    // Attachment dispatch — route by file type × model capability:
+    //   image/*           → image_url block (vision model required)
+    //   PDF + Claude      → document block, raw base64 (Anthropic native)
+    //   PDF + GPT vision  → render pages → image_url blocks
+    //   PDF + other       → pdfjs text extraction (fallback)
+    //   docx/xlsx/txt/md  → parser → text injection
+    const visionOK = isVisionCapable(settings.activeModel);
+    const nativePDF = supportsNativePDF(settings.activeModel);
+
     const parsedDocs: ParsedDocument[] = [];
+    const imageBlocks: ChatContentBlock[] = [];
+    const documentBlocks: ChatContentBlock[] = [];
+
     for (const f of attachments) {
       try {
-        const p = await parseDocument(f);
-        parsedDocs.push(p);
-        await db.attachments.add({
-          id: uuid(),
-          conversationId: convId,
-          name: p.name,
-          mime: p.mime,
-          parsedText: p.text,
-          meta: p.meta,
-          createdAt: Date.now(),
-        });
+        const isImage = f.type.startsWith('image/');
+        const isPDF = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+
+        if (isImage) {
+          if (!visionOK) {
+            console.warn(`Image "${f.name}" skipped — model ${settings.activeModel} is not vision-capable.`);
+            continue;
+          }
+          const dataUrl = await fileToDataUrl(f);
+          imageBlocks.push({ type: 'image_url', image_url: { url: dataUrl } });
+          await db.attachments.add({
+            id: uuid(),
+            conversationId: convId,
+            name: f.name,
+            mime: f.type,
+            parsedText: '',
+            meta: { kind: 'image', dataUrl },
+            createdAt: Date.now(),
+          });
+        } else if (isPDF && nativePDF) {
+          const b64 = await fileToBase64(f);
+          documentBlocks.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: b64 },
+            name: f.name,
+          });
+          await db.attachments.add({
+            id: uuid(),
+            conversationId: convId,
+            name: f.name,
+            mime: 'application/pdf',
+            parsedText: '',
+            meta: { kind: 'pdf-native' },
+            createdAt: Date.now(),
+          });
+        } else if (isPDF && visionOK) {
+          const pages = await renderPdfPagesAsImages(f, 20);
+          for (const url of pages) {
+            imageBlocks.push({ type: 'image_url', image_url: { url } });
+          }
+          await db.attachments.add({
+            id: uuid(),
+            conversationId: convId,
+            name: f.name,
+            mime: 'application/pdf',
+            parsedText: '',
+            meta: { kind: 'pdf-rendered', pageCount: pages.length },
+            createdAt: Date.now(),
+          });
+        } else {
+          const p = await parseDocument(f);
+          parsedDocs.push(p);
+          await db.attachments.add({
+            id: uuid(),
+            conversationId: convId,
+            name: p.name,
+            mime: p.mime,
+            parsedText: p.text,
+            meta: { ...(p.meta ?? {}), kind: 'doc' },
+            createdAt: Date.now(),
+          });
+        }
       } catch (e) {
-        console.error('parse failed', e);
+        console.error('attachment failed', e);
       }
     }
 
-    // Build user content: text + attachments inline
-    let userContent: string = text;
-    if (parsedDocs.length > 0) {
-      const docBlock = parsedDocs
-        .map((d) => `<document name="${d.name}">\n${d.text}\n</document>`)
-        .join('\n\n');
-      userContent = `${docBlock}\n\n${text}`.trim();
+    // Build user message content. Pure-text fast path stays as a string;
+    // mixed paths (with images / documents) use a content-block array.
+    const textPart = parsedDocs.length > 0
+      ? `${parsedDocs.map((d) => `<document name="${d.name}">\n${d.text}\n</document>`).join('\n\n')}\n\n${text}`.trim()
+      : text;
+
+    const nonTextBlocks = [...documentBlocks, ...imageBlocks];
+    let userContent: string | ChatContentBlock[];
+    if (nonTextBlocks.length > 0) {
+      const blocks: ChatContentBlock[] = [...nonTextBlocks];
+      if (textPart) blocks.push({ type: 'text', text: textPart });
+      userContent = blocks;
+    } else {
+      userContent = textPart;
     }
 
     const userMsg: ChatMessage = { role: 'user', content: userContent };
@@ -354,4 +425,13 @@ function rowToUI(row: MessageRow): UIMessage {
     tool_calls: row.tool_calls,
     tool_call_id: row.tool_call_id,
   };
+}
+
+function fileToDataUrl(file: File | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
+    reader.readAsDataURL(file);
+  });
 }

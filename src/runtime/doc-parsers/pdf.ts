@@ -29,3 +29,46 @@ export async function parsePDF(file: File | Blob): Promise<PDFParseResult> {
     pages,
   };
 }
+
+/** Read a file's raw bytes as base64 (no `data:...;base64,` prefix). */
+export async function fileToBase64(file: File | Blob): Promise<string> {
+  const ab = await file.arrayBuffer();
+  const bytes = new Uint8Array(ab);
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(
+      null,
+      Array.from(bytes.subarray(i, i + CHUNK)),
+    );
+  }
+  return btoa(binary);
+}
+
+/**
+ * Render each PDF page to a PNG data URL using pdfjs + a canvas. Caps at
+ * `maxPages` to bound memory and token cost. Used when the active model is
+ * vision-capable but doesn't accept raw PDF bytes (OpenAI-style providers).
+ */
+export async function renderPdfPagesAsImages(
+  file: File | Blob,
+  maxPages = 20,
+  scale = 1.5,
+): Promise<string[]> {
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: ab }).promise;
+  const pageCount = Math.min(pdf.numPages, maxPages);
+  const urls: string[] = [];
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context unavailable');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    urls.push(canvas.toDataURL('image/png'));
+  }
+  return urls;
+}

@@ -56,6 +56,11 @@ export interface ChatMessage {
 export type ChatContentBlock =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } }
+  | {
+      type: 'document';
+      source: { type: 'base64'; media_type: string; data: string };
+      name?: string;
+    }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
 

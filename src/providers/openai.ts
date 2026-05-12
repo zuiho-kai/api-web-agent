@@ -229,6 +229,15 @@ function toOpenAIMessages(msgs: ChatMessage[], system?: string): Array<Record<st
             userParts.push({ type: 'text', text: b.text });
           } else if (b.type === 'image_url') {
             userParts.push({ type: 'image_url', image_url: b.image_url });
+          } else if (b.type === 'document') {
+            // OpenAI chat/completions does not accept raw PDF bytes.
+            // Surface a placeholder so the model knows a document was attached
+            // but cannot be read directly here. (PDF→image fallback should
+            // happen upstream in the store before reaching this adapter.)
+            userParts.push({
+              type: 'text',
+              text: `[Document attached: ${b.name ?? 'file'} (${b.source.media_type}); not natively readable by this model — content not shown]`,
+            });
           }
         }
         if (userParts.length) {

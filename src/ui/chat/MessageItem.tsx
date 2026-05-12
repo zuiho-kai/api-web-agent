@@ -16,6 +16,7 @@ export function MessageItem({ message }: Props) {
 
   const text = extractText(message);
   const toolBlocks = extractToolUseBlocks(message);
+  const imageBlocks = extractImageBlocks(message);
 
   return (
     <div className={`group ${isUser ? 'bg-zinc-50' : 'bg-white'} border-b border-zinc-100`}>
@@ -73,6 +74,26 @@ export function MessageItem({ message }: Props) {
                 status="done"
               />
             ))}
+          {imageBlocks.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {imageBlocks.map((src, i) => (
+                <a
+                  key={i}
+                  href={src}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-block"
+                  title="点击查看原图"
+                >
+                  <img
+                    src={src}
+                    alt={`image-${i}`}
+                    className="max-h-40 max-w-xs rounded border border-zinc-200"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
           {text && (
             <div className="prose prose-zinc prose-sm max-w-none">
               {isAssistant ? (
@@ -102,6 +123,13 @@ function extractText(m: UIMessage): string {
     .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
     .map((b) => b.text)
     .join('');
+}
+
+function extractImageBlocks(m: UIMessage): string[] {
+  if (typeof m.content === 'string') return [];
+  return m.content
+    .filter((b): b is { type: 'image_url'; image_url: { url: string } } => b.type === 'image_url')
+    .map((b) => b.image_url.url);
 }
 
 function extractToolUseBlocks(m: UIMessage) {
