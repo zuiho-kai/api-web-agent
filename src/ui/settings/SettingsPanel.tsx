@@ -16,6 +16,8 @@ export function SettingsPanel() {
   const [editing, setEditing] = useState<ProviderConfig | null>(null);
   const [creating, setCreating] = useState(false);
 
+  const activeProvider = settings.providers.find((p) => p.id === settings.activeProviderId) ?? null;
+
   if (!open) return null;
 
   return (
@@ -35,6 +37,7 @@ export function SettingsPanel() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {!LOCKED_PROVIDER.enabled && (
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold">Providers</h3>
@@ -130,45 +133,114 @@ export function SettingsPanel() {
               )}
             </div>
           </section>
+          )}
 
           <section>
-            <h3 className="text-sm font-semibold mb-2">活跃配置</h3>
-            <div className="space-y-2">
+            <h3 className="text-sm font-semibold mb-2">
+              {LOCKED_PROVIDER.enabled ? '配置' : '活跃配置'}
+            </h3>
+            <div className="space-y-3">
+              {LOCKED_PROVIDER.enabled ? (
+                <div className="text-xs text-zinc-600 px-3 py-2 bg-zinc-50 rounded border border-zinc-200">
+                  <div>
+                    <span className="font-semibold">🔒 {LOCKED_PROVIDER.name}</span>
+                  </div>
+                  <div className="font-mono text-zinc-400 truncate mt-0.5">
+                    {LOCKED_PROVIDER.baseURL}
+                  </div>
+                </div>
+              ) : (
+                <label className="block text-xs">
+                  <div className="text-zinc-600 mb-1">Provider</div>
+                  <select
+                    value={settings.activeProviderId ?? ''}
+                    onChange={(e) => updateSettings({ activeProviderId: e.target.value || null })}
+                    className="w-full border border-zinc-300 rounded px-2 py-1 text-sm"
+                  >
+                    <option value="">— 选择 —</option>
+                    {settings.providers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
               <label className="block text-xs">
-                <div className="text-zinc-600 mb-1">Provider</div>
-                <select
-                  value={settings.activeProviderId ?? ''}
-                  onChange={(e) => updateSettings({ activeProviderId: e.target.value || null })}
-                  className="w-full border border-zinc-300 rounded px-2 py-1 text-sm"
-                >
-                  <option value="">— 选择 —</option>
-                  {settings.providers.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-xs">
-                <div className="text-zinc-600 mb-1">Model</div>
+                <div className="text-zinc-600 mb-1">API Key</div>
                 <input
-                  list="model-presets-settings"
-                  value={settings.activeModel ?? ''}
-                  onChange={(e) => updateSettings({ activeModel: e.target.value || null })}
-                  placeholder="选预设或输入任意 model 名"
-                  className="w-full border border-zinc-300 rounded px-2 py-1 text-sm font-mono"
+                  type="password"
+                  value={activeProvider?.apiKey ?? ''}
+                  onChange={(e) => {
+                    if (!activeProvider) return;
+                    addOrUpdate({ ...activeProvider, apiKey: e.target.value });
+                  }}
+                  disabled={!activeProvider}
+                  placeholder={activeProvider ? 'sk-…' : '请先选 Provider'}
+                  className="w-full border border-zinc-300 rounded px-2 py-1 text-sm font-mono disabled:bg-zinc-50"
                 />
-                <datalist id="model-presets-settings">
-                  {PRESET_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-                </datalist>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  存在 LocalStorage（明文，仅你的浏览器）
+                </p>
               </label>
-              <p className="text-xs text-zinc-400">
-                点 input 选预设或自由输入。以 <code>claude-</code> 开头自动走 Anthropic 协议，其余走 OpenAI 协议。
-              </p>
+
+              <div className="block text-xs">
+                <div className="text-zinc-600 mb-2">Model</div>
+                <div className="space-y-2">
+                  {(['claude', 'gpt', 'grok'] as const).map((fam) => (
+                    <div key={fam}>
+                      <div className="text-[10px] text-zinc-400 uppercase mb-1">{fam}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {PRESET_MODELS.filter((m) => m.family === fam).map((m) => {
+                          const active = settings.activeModel === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => updateSettings({ activeModel: m.id })}
+                              className={`px-2 py-1 rounded text-xs font-mono border ${
+                                active
+                                  ? 'bg-zinc-900 text-white border-zinc-900'
+                                  : 'bg-white border-zinc-300 hover:bg-zinc-100'
+                              }`}
+                            >
+                              {m.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      setTimeout(() => {
+                        const el = document.getElementById(
+                          'header-model-input',
+                        ) as HTMLInputElement | null;
+                        el?.focus();
+                        el?.select();
+                      }, 50);
+                    }}
+                    className="text-xs px-2 py-1 border border-zinc-300 border-dashed rounded hover:bg-zinc-50"
+                  >
+                    + 新建模型（去顶部输入）
+                  </button>
+                  {settings.activeModel &&
+                    !PRESET_MODELS.some((m) => m.id === settings.activeModel) && (
+                      <span className="text-xs text-zinc-500 font-mono">
+                        当前自定义: {settings.activeModel}
+                      </span>
+                    )}
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-2">
+                  以 <code>claude-</code> 开头自动走 Anthropic 协议，其余走 OpenAI 协议。
+                </p>
+              </div>
             </div>
           </section>
         </div>

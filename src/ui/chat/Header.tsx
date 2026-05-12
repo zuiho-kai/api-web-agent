@@ -39,6 +39,7 @@ export function Header() {
           </select>
         )}
         <input
+          id="header-model-input"
           list="model-presets-header"
           value={settings.activeModel ?? ''}
           onChange={(e) => updateSettings({ activeModel: e.target.value || null })}
