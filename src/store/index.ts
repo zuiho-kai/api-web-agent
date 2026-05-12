@@ -6,7 +6,7 @@ import { runAgent, type AgentEvent } from '@/agent/loop';
 import { createDefaultRegistry } from '@/tools/builtin';
 import { chatMode } from '@/modes/chat';
 import { parseDocument, type ParsedDocument } from '@/runtime/doc-parsers';
-import { fileToBase64, renderPdfPagesAsImages } from '@/runtime/doc-parsers/pdf';
+import { fileToBase64 } from '@/runtime/files';
 import {
   appendMessage,
   createConversation,
@@ -196,6 +196,7 @@ export const useStore = create<AppState>((set, get) => ({
             createdAt: Date.now(),
           });
         } else if (isPDF && visionOK) {
+          const { renderPdfPagesAsImages } = await import('@/runtime/doc-parsers/pdf');
           const pages = await renderPdfPagesAsImages(f, 20);
           for (const url of pages) {
             imageBlocks.push({ type: 'image_url', image_url: { url } });

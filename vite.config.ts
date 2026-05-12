@@ -12,6 +12,33 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  build: {
+    // Split heavy deps into their own chunks so the main entry stays small.
+    // pdfjs / mammoth+turndown / xlsx are only used after a user uploads a
+    // file — paired with dynamic imports in doc-parsers, the chunks are
+    // lazy-loaded on demand instead of bloating first paint.
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/pdfjs-dist')) return 'pdfjs';
+          if (id.includes('node_modules/mammoth') || id.includes('node_modules/turndown')) return 'docx';
+          if (id.includes('node_modules/xlsx')) return 'xlsx';
+          if (
+            id.includes('node_modules/react-markdown') ||
+            id.includes('node_modules/rehype-highlight') ||
+            id.includes('node_modules/remark-gfm') ||
+            id.includes('node_modules/highlight.js')
+          ) {
+            return 'markdown';
+          }
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'react-vendor';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1200,
+  },
   server: {
     headers: {
       'Cross-Origin-Embedder-Policy': 'require-corp',
