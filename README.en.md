@@ -1,109 +1,107 @@
 # api-web-agent
 
-> A 0-backend, BYO-key, multi-provider AI agent platform that runs entirely in your browser.
+> **Chat as easily as Doubao / ChatGPT, but with your own API key.** A 0-backend, BYO-key, multi-provider AI agent that runs entirely in your browser.
 
 [中文文档](./README.md) · **English**
-
-
-Connect to any OpenAI-compatible or Anthropic-native endpoint, give the model real tools (web search, web fetch, document reading), and watch it think and act — all without sending your API keys to anyone but the LLM provider you choose.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
 
-## Highlights
+<img width="1920" height="878" alt="screenshot" src="https://github.com/user-attachments/assets/1a889eff-3c23-4aa8-ac33-f8f1d7406baa" />
 
-- **Dual adapter with auto-routing**: model names starting with `claude-*` route to the Anthropic `/v1/messages` protocol (native tool_use SSE, prompt caching with `cache_control`, extended thinking budget). Everything else (`gpt-*`, `grok-*`, `deepseek-*`, `kimi-*`, `qwen-*`, …) routes to the OpenAI `/v1/chat/completions` protocol (`tool_calls.delta` accumulation, `reasoning_effort` including the Codex `xhigh` extension).
-- **Client-side function calling** — your tools, your runtime. No dependency on provider-hosted tools or vendor-specific APIs.
-- **Built-in tools (zero external API keys required)**:
-  - `web_search` — Jina Reader + DuckDuckGo HTML
-  - `web_fetch` — Jina Reader
-  - Document upload: PDF (pdf.js), DOCX (mammoth), XLSX (SheetJS), all parsed in-browser.
-- **Streaming UI** with Markdown + code highlight, tool-call cards, and a collapsible thinking panel that streams the model's reasoning in real time.
-- **5-level thinking control** (关闭/低/中/高/超高) unified across Anthropic `budget_tokens` and OpenAI `reasoning_effort`.
-- **Prompt caching pattern** baked into the Anthropic adapter (3-breakpoint Claude-Code-style: system / tools tail / messages tail).
-- **Persistence**: IndexedDB (conversations + messages + attachments) via Dexie, LocalStorage (provider configs + active model + thinking level).
-- **Deploy anywhere static**: Cloudflare Pages, Vercel, GitHub Pages, Netlify, or a plain S3 bucket.
+## Who is this for
 
-## Quick start
+**Casual users**: you don't want to sign up for yet another account, install yet another app, or fight a paywall. You already have an OpenAI / Claude / Kimi / DeepSeek key (or a corporate proxy key) — just paste it in and chat. **Skip the monthly subscription, your key, your unlimited usage.**
 
-```bash
-git clone <repo-url> api-web-agent
-cd api-web-agent
-npm install
-npm run dev
-```
+**Power users**: you want more than just chat — let the model search the web, read your PDFs/Excel/images, see its reasoning, switch providers at will — **without spinning up a server, Docker container, or signing up for anything**. Pure browser.
 
-Open `http://localhost:5173/`. The settings panel opens automatically on first launch — add at least one provider:
+## 30 seconds to start
 
-| Field | Example |
-|---|---|
-| **Name** | `My OpenAI` |
-| **Base URL** | `https://api.openai.com` (or any OpenAI-compatible / Anthropic-native endpoint, no trailing `/v1`) |
-| **API Key** | `sk-…` |
-| **Protocol** | Auto (recommended) — let the model-name prefix decide |
+1. Open the page (host yourself / run locally — see below)
+2. Settings panel auto-opens on first launch. Fill in one provider:
+   - **Base URL**: `https://api.openai.com` (or any OpenAI-compatible / Anthropic-native endpoint, no trailing `/v1`)
+   - **API Key**: `sk-…` (**stored only in your browser, never sent anywhere except your endpoint**)
+3. Pick a model from the preset dropdown (Claude / GPT / Grok) or type any custom name
+4. Drag a file / paste an image / start typing → Enter to send
 
-Then pick a model from the preset dropdown (Claude 4.6/4.7, GPT-5.x, Grok-4.x) or type any custom model name. Start chatting.
+Done.
+
+## Feels like Doubao/ChatGPT, capabilities like Claude Code
+
+- 🗨️ **Chat**: streaming output, Markdown + code highlighting, multi-turn context
+- 🔍 **Web search**: the model decides when to search, uses Jina Reader + DuckDuckGo, **zero extra API keys**
+- 📄 **Document reading**: drag a PDF / DOCX / XLSX / image, the model reads it natively
+  - PDFs go to Claude via the native `document` content block — preserves layout / charts
+  - Images go to vision models (Claude 4 / GPT-4o / Grok-4)
+  - DOCX parsed as Markdown preserving tables and heading hierarchy
+  - XLSX split per-sheet, large sheets auto head + tail truncated
+- 🧠 **Visible reasoning**: 5-level thinking budget (off / low / medium / high / xhigh); Claude's thinking streams live in a collapsible panel
+- ⚡ **Prompt caching**: Anthropic 3-breakpoint cache pattern, 90% input cost savings on hits
+- 💾 **Persistence**: IndexedDB stores all conversations, attachments, settings — closes and reopens
+- 🚀 **Zero backend**: pure static SPA, deploy anywhere (Cloudflare Pages / Vercel / GitHub Pages / Netlify / S3)
 
 ## Built-in model presets
 
 | Family | Models |
 |---|---|
-| Claude | Opus 4.7 / 4.6 (+ thinking) · Sonnet 4.6 (+ thinking) · Haiku 4.5 |
+| Claude | Opus 4.7 (default) / 4.6 (+ thinking) · Sonnet 4.6 (+ thinking) · Haiku 4.5 |
 | GPT    | GPT-5.5 · GPT-5.4 · GPT-5.3 Codex |
 | Grok   | Grok 4 · Grok 4 Heavy · Grok 4 (thinking) · Grok 4.1 Fast |
 
-Custom model names work too — just type any string and the adapter routes by prefix.
+You can also type any custom model name — **any OpenAI-compatible or Anthropic-native model just works**.
 
-## Architecture
-
-```
-React UI ── Zustand store ── Agent loop ─┬─ Anthropic adapter  (/v1/messages)
-                                         └─ OpenAI adapter     (/v1/chat/completions)
-
-Tools (client-side)         Storage
-├── web_search (Jina+DDG)   ├── IndexedDB (Dexie): conversations, messages, attachments
-├── web_fetch  (Jina)       └── LocalStorage: settings + API keys
-└── doc parsers (pdf/docx/xlsx, browser-side)
-```
-
-## Build & deploy
+## Run locally / self-host
 
 ```bash
-npm run build      # outputs to dist/
-npm run preview    # serve dist/ locally
-npm run typecheck
+git clone https://github.com/zuiho-kai/api-web-agent.git
+cd api-web-agent
+npm install
+npm run dev       # local http://localhost:5173/
 ```
 
-The `public/_headers` file sets `Cross-Origin-Embedder-Policy: require-corp` + `Cross-Origin-Opener-Policy: same-origin` for Cloudflare Pages, preparing the ground for future WebContainers support.
+Build as static artifacts:
+
+```bash
+npm run build     # outputs to dist/
+npm run preview   # preview the build locally
+```
+
+Upload `dist/` to any static host (Cloudflare Pages / Vercel / GitHub Pages / Netlify) and you're done. `public/_headers` already includes COOP/COEP headers for future WebContainers integration.
+
+## Architecture (for the curious)
+
+```
+React UI ── Zustand store ── Agent loop ─┬─ Anthropic adapter (/v1/messages)
+                                         └─ OpenAI adapter    (/v1/chat/completions)
+
+Auto-routed by model-name prefix:
+  claude-*  → Anthropic protocol (native tool_use SSE, cache_control, thinking budget)
+  otherwise → OpenAI protocol (tool_calls.delta, reasoning_effort incl. Codex xhigh)
+
+Tools (client-side)        Storage
+├── web_search (Jina+DDG)  ├── IndexedDB (Dexie): conversations / messages / attachments
+├── web_fetch  (Jina)      └── LocalStorage: settings + API keys
+└── doc parsers (pdf/docx/xlsx, lazy-loaded browser-side)
+```
 
 ## Testing
 
 ```bash
-cp .env.example .env       # then fill in PROXY_BASE_URL + two keys
+cp .env.example .env       # fill in PROXY_BASE_URL + two keys
 npm test                   # 21 real-API end-to-end tests
 ```
 
-Tests hit real provider endpoints (no mocks). They cover:
+No mocks; tests hit real provider endpoints. Coverage: router / SSE parsing / adapter tool-call accumulation / web_search / agent loop / multi-turn context / long-context fact extraction / prompt caching hits / thinking budget sweep.
 
-- Router model-name → protocol detection
-- SSE parsing (Anthropic event/data + OpenAI data-only)
-- Adapter tool-call accumulation
-- Web search tool real fetch
-- Agent loop end-to-end (e.g. "What's the weather in Tokyo?")
-- Multi-turn context retention across 3 protocol paths
-- Long-context fact extraction from a ~4KB document
-- Prompt caching `cache_read` measurement
-- Thinking budget sweep + `reasoning_effort` including `xhigh`
+## Privacy / security
 
-## Privacy / security model
-
-- **Your API keys live only in your browser's LocalStorage** (plaintext). Clearing site data deletes them. They're sent only to the endpoint you configured — never to any other server.
-- **No backend**, no analytics, no telemetry. Static site through and through.
-- Documents you upload are parsed in your browser and embedded inline into the next message. The original bytes can also be persisted to OPFS (Origin Private File System) for re-use across sessions.
-- The dev server sends COOP/COEP headers but the production build is otherwise plain static HTML/JS.
+- **Your API key lives only in browser LocalStorage** (plaintext). Clearing site data wipes it. Sent only to the endpoint you configured.
+- **No backend, no analytics, no telemetry**. Pure static site.
+- Documents you upload are parsed in your browser; the model sees exactly what you dragged in.
+- Production build is plain static HTML/JS.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT — see [LICENSE](./LICENSE)
