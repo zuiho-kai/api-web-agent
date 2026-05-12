@@ -47,15 +47,19 @@ export const bundleFiles: ToolDefinition = {
       }
       const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
 
-      // Trigger browser download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = archiveName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      // Trigger browser download (only in DOM environments — Node tests skip).
+      const hasDOM =
+        typeof document !== 'undefined' && typeof URL?.createObjectURL === 'function';
+      if (hasDOM) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = archiveName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
 
       const list = files.map((f) => `- ${f.path}`).join('\n');
       return [
