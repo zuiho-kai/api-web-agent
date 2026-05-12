@@ -26,18 +26,18 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy dist/ to server
-        uses: easingthemes/ssh-deploy@v5
-        with:
-          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
-          REMOTE_USER: root
-          REMOTE_PORT: 22
-          SOURCE: "dist/"
-          TARGET: "/srv/agent/"
-          # -r recursive, -l symlinks, -t times, -D devices, -v verbose, -z compress
-          # --delete removes files on remote that no longer exist in dist/
-          ARGS: "-rltDvz --delete"
+      - name: Deploy dist/ to server (rsync over SSH)
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H -t ed25519,rsa "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          rsync -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            -rltDvz --delete \
+            dist/ "root@$HOST:/srv/agent/"
 
       - name: Smoke test
         run: |
