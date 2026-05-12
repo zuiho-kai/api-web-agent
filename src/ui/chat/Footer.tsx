@@ -74,10 +74,6 @@ export function Footer() {
           MIT
         </a>
       </div>
-
-      <div className="text-zinc-400 text-[9px] pt-1 border-t border-zinc-100">
-        Built with Claude · 喜欢的话给个 ⭐
-      </div>
     </div>
   );
 }
