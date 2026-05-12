@@ -25,7 +25,9 @@ function formatSize(bytes: number): string {
 export function Composer() {
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounter = useRef(0);
 
   const isStreaming = useStore((s) => s.isStreaming);
   const send = useStore((s) => s.sendMessage);
@@ -63,8 +65,52 @@ export function Composer() {
     }
   }
 
+  // Drag-and-drop handlers. dragCounter handles nested drag enter/leave
+  // (textarea/button children fire their own events) so the overlay
+  // doesn't flicker.
+  function onDragEnter(e: React.DragEvent) {
+    if (!Array.from(e.dataTransfer.types ?? []).includes('Files')) return;
+    e.preventDefault();
+    dragCounter.current += 1;
+    setDragOver(true);
+  }
+  function onDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDragOver(false);
+    }
+  }
+  function onDragOver(e: React.DragEvent) {
+    if (Array.from(e.dataTransfer.types ?? []).includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setDragOver(false);
+    const dropped = Array.from(e.dataTransfer.files ?? []);
+    if (dropped.length > 0) {
+      setFiles((prev) => [...prev, ...dropped]);
+    }
+  }
+
   return (
-    <div className="border-t border-zinc-200 bg-white p-3">
+    <div
+      className="relative border-t border-zinc-200 bg-white p-3"
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {dragOver && (
+        <div className="absolute inset-2 z-10 flex items-center justify-center bg-blue-50/95 border-2 border-dashed border-blue-400 rounded text-blue-700 text-sm font-semibold pointer-events-none">
+          📥 松开上传文件
+        </div>
+      )}
       <div className="max-w-3xl mx-auto">
         {files.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
@@ -93,7 +139,7 @@ export function Composer() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 active:bg-zinc-300 text-zinc-700 rounded text-xl"
-            title="上传文档或图片（PDF / DOCX / XLSX / 图片）"
+            title="上传文档或图片"
           >
             📎
           </button>
@@ -113,7 +159,7 @@ export function Composer() {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
-            placeholder="输入消息 · 可粘贴图片或文件 · 点 📎 上传 · Enter 发送 · Shift+Enter 换行"
+            placeholder="输入消息 · 可拖拽或粘贴文件/图片 · Enter 发送 · Shift+Enter 换行"
             rows={2}
             className="flex-1 resize-none border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-zinc-500"
           />
