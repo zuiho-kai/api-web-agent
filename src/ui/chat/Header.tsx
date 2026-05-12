@@ -43,7 +43,7 @@ export function Header() {
           list="model-presets-header"
           value={settings.activeModel ?? ''}
           onChange={(e) => updateSettings({ activeModel: e.target.value || null })}
-          placeholder="选 / 输入 model"
+          placeholder="输入 model"
           className="border border-zinc-300 rounded px-2 py-1 text-xs w-56 font-mono"
         />
         <datalist id="model-presets-header">
