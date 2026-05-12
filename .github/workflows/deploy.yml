@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Build (with lock-provider env from secrets)
+      - name: Build (lock-provider + base path from secrets)
         env:
           # When these secrets are set on the repo, the deployed SPA boots
           # in locked-provider mode. Public OSS clones without these env
@@ -31,6 +31,8 @@ jobs:
           VITE_LOCK_PROVIDER: ${{ secrets.LOCK_PROVIDER }}
           VITE_LOCKED_BASE_URL: ${{ secrets.LOCKED_BASE_URL }}
           VITE_LOCKED_PROVIDER_NAME: ${{ secrets.LOCKED_PROVIDER_NAME }}
+          # Sub-path deployment (e.g. /api_web_agent/). Empty = root.
+          VITE_BASE_PATH: ${{ secrets.BASE_PATH }}
         run: npm run build
 
       - name: Deploy dist/ to server (rsync over SSH)
@@ -47,6 +49,15 @@ jobs:
             dist/ "root@$HOST:/srv/agent/"
 
       - name: Smoke test
+        env:
+          BASE: ${{ secrets.BASE_PATH }}
         run: |
-          curl -fsS -m 10 "http://${{ secrets.SERVER_HOST }}:8080/" -o /dev/null
-          echo "✓ http://${{ secrets.SERVER_HOST }}:8080/ returns 200"
+          # Probe via the public Caddy URL if BASE_PATH is set, else fall
+          # back to the raw IP:8080.
+          if [ -n "$BASE" ] && [ -n "${{ secrets.PUBLIC_URL }}" ]; then
+            curl -fsS -m 10 "${{ secrets.PUBLIC_URL }}$BASE" -o /dev/null
+            echo "✓ ${{ secrets.PUBLIC_URL }}$BASE returns 200"
+          else
+            curl -fsS -m 10 "http://${{ secrets.SERVER_HOST }}:8080/" -o /dev/null
+            echo "✓ http://${{ secrets.SERVER_HOST }}:8080/ returns 200"
+          fi
