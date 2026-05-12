@@ -1,4 +1,4 @@
-const GITHUB_URL = 'https://github.com/zuiho-kai/api-web-agent-oss';
+const GITHUB_URL = 'https://github.com/zuiho-kai/api-web-agent';
 
 export function Footer() {
   return (
