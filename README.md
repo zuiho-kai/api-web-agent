@@ -19,12 +19,34 @@
 
 ## 30 秒上手
 
-1. 打开网页（自己部署 / clone 本地跑，下面都有说明）
-2. 第一次进会自动弹出设置面板，填一个 provider：
+**最快路径（一行 Docker）**：
+
+```bash
+docker run -d -p 8080:80 ghcr.io/zuiho-kai/api-web-agent:latest
+```
+
+打开 `http://localhost:8080/`，第一次自动弹出设置面板，填进你自己的 API key，开聊。
+
+**或者下载 dist.zip**（任何静态服务器 / 本地双击）：
+
+1. 去 [Releases](https://github.com/zuiho-kai/api-web-agent/releases/latest) 下载 `api-web-agent-vX.Y.Z-dist.zip`
+2. 解压后 `npx serve dist` 或者直接拖文件夹到 Cloudflare Pages / Vercel / Netlify
+
+**或者本地源码跑**（最适合改代码）：
+
+```bash
+git clone https://github.com/zuiho-kai/api-web-agent.git
+cd api-web-agent
+npm install && npm run dev
+```
+
+### 怎么用（任选其中一种部署方式之后）
+
+1. 第一次自动弹出设置面板，填一个 provider：
    - **Base URL**：`https://api.openai.com`（或任何 OpenAI 兼容 / Anthropic 原生接口，不含 `/v1`）
    - **API Key**：`sk-…`（**只存你浏览器，不发任何第三方服务器**）
-3. 在顶部 model 框里选预设（Claude / GPT / Grok）或自由输入任意 model 名
-4. 输入框拖拽文件 / 粘贴图片 / 直接打字 → Enter 发送
+2. 顶部 model 框选预设（Claude / GPT / Grok）或自由输入任意 model 名
+3. 输入框拖拽文件 / 粘贴图片 / 直接打字 → Enter 发送
 
 就这样。
 
@@ -40,6 +62,8 @@
 - 🧠 **思考过程可见**：5 档思考预算（关闭/低/中/高/超高），Claude 的 thinking 在折叠面板里实时流式显示
 - ⚡ **prompt caching**：Anthropic 3-breakpoint 缓存命中省 90% 输入费
 - 💾 **持久化**：IndexedDB 存所有会话、附件、设置；关浏览器再开还在
+- 🧰 **多文件代码 → 一键下载 zip**：让模型写一个完整项目（package.json + 多个 .ts/.tsx 等），模型自动调用 `bundle_files` 工具打包，浏览器直接下载 zip
+- 📋 **每个代码块复制 / 下载**：鼠标 hover assistant 消息里的代码块，右上角出现"复制 / 下载"按钮
 - 🚀 **零后端**：纯静态 SPA，任意托管（Cloudflare Pages / Vercel / GitHub Pages / Netlify / S3）
 
 ## 内置模型预设
