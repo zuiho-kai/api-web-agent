@@ -3,7 +3,9 @@ import type { ProviderConfig, ThinkingLevel } from '@/providers/base';
 const KEY = 'api-web-agent/settings/v1';
 
 /** Bump when defaults change in a way that should migrate old settings. */
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
+
+const DEFAULT_MODEL = 'claude-opus-4-7';
 
 export interface AppSettings {
   providers: ProviderConfig[];
@@ -17,7 +19,7 @@ export interface AppSettings {
 const DEFAULTS: AppSettings = {
   providers: [],
   activeProviderId: null,
-  activeModel: null,
+  activeModel: DEFAULT_MODEL,
   modeId: 'chat',
   thinkingLevel: 'high',
   _version: CURRENT_VERSION,
@@ -31,14 +33,17 @@ export function loadSettings(): AppSettings {
     const merged: AppSettings = { ...DEFAULTS, ...parsed };
 
     // v2 migration: raised default thinkingLevel from 'off' → 'high'.
-    // Old users (no _version stamp) sitting on 'off' were likely never
-    // active choosers — upgrade them. Users who chose 'low' / 'medium' /
-    // 'high' / 'xhigh' explicitly are kept as-is.
     if (!parsed._version || parsed._version < 2) {
       if (merged.thinkingLevel === 'off') merged.thinkingLevel = 'high';
-      merged._version = CURRENT_VERSION;
     }
 
+    // v3 migration: default activeModel set to claude-opus-4-7.
+    // Users who never picked a model (null/empty) get upgraded.
+    if (!parsed._version || parsed._version < 3) {
+      if (!merged.activeModel) merged.activeModel = DEFAULT_MODEL;
+    }
+
+    merged._version = CURRENT_VERSION;
     return merged;
   } catch {
     return { ...DEFAULTS };
