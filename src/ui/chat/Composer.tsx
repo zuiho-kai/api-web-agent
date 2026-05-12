@@ -92,8 +92,8 @@ export function Composer() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-2 text-zinc-600 hover:bg-zinc-100 rounded text-sm"
-            title="上传文档或图片"
+            className="shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 active:bg-zinc-300 text-zinc-700 rounded text-xl"
+            title="上传文档或图片（PDF / DOCX / XLSX / 图片）"
           >
             📎
           </button>
@@ -113,7 +113,7 @@ export function Composer() {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
-            placeholder="输入消息，Enter 发送，Shift+Enter 换行；可粘贴图片"
+            placeholder="输入消息 · 可粘贴图片或文件 · 点 📎 上传 · Enter 发送 · Shift+Enter 换行"
             rows={2}
             className="flex-1 resize-none border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-zinc-500"
           />
