@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import type { UIMessage } from '@/store';
 import { ToolCallCard } from './ToolCallCard';
+import { CodeBlock } from './CodeBlock';
 
 interface Props {
   message: UIMessage;
@@ -100,6 +101,23 @@ export function MessageItem({ message }: Props) {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    pre({ children }) {
+                      // Walk to the inner <code> to grab its className (language-X)
+                      // and raw text content for copy/download.
+                      const arr = React.Children.toArray(children);
+                      const codeEl = arr.find(
+                        (c): c is React.ReactElement<{ className?: string; children?: React.ReactNode }> => {
+                          if (!React.isValidElement(c)) return false;
+                          const props = c.props as { className?: string };
+                          return c.type === 'code' || props.className?.startsWith('language-') === true;
+                        },
+                      );
+                      const lang = (codeEl?.props.className ?? '').replace('language-', '').replace(/\s.*/, '');
+                      const text = extractCodeText(codeEl?.props.children);
+                      return <CodeBlock language={lang} text={text}>{children as React.ReactElement}</CodeBlock>;
+                    },
+                  }}
                 >
                   {text}
                 </ReactMarkdown>
@@ -115,6 +133,19 @@ export function MessageItem({ message }: Props) {
       </div>
     </div>
   );
+}
+
+function extractCodeText(children: React.ReactNode): string {
+  // rehype-highlight wraps tokens in nested <span>s; flatten to plain text.
+  if (children == null) return '';
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (Array.isArray(children)) return children.map(extractCodeText).join('');
+  if (React.isValidElement(children)) {
+    const props = children.props as { children?: React.ReactNode };
+    return extractCodeText(props.children);
+  }
+  return '';
 }
 
 function extractText(m: UIMessage): string {
