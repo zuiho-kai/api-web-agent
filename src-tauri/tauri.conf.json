@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "api-web-agent",
+  "version": "0.1.3",
+  "identifier": "io.github.zuiho-kai.api-web-agent",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "api-web-agent",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 500,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png"],
+    "category": "DeveloperTool",
+    "shortDescription": "Browser-side AI agent platform",
+    "longDescription": "BYO-key multi-provider AI agent that runs entirely client-side. Connect to any OpenAI-compatible or Anthropic-native endpoint, with web search, document reading, multi-modal input, and live thinking display."
+  }
+}
