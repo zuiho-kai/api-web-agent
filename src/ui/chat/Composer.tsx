@@ -1,8 +1,5 @@
-import { useRef, useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '@/store';
-
-const ACCEPT =
-  '.pdf,.docx,.xlsx,.xls,.txt,.md,.csv,.json,image/png,image/jpeg,image/webp,image/gif';
 
 function mimeIcon(file: File): string {
   const t = file.type;
@@ -26,7 +23,6 @@ export function Composer() {
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
   const isStreaming = useStore((s) => s.isStreaming);
@@ -39,7 +35,6 @@ export function Composer() {
     void send(t, files);
     setText('');
     setFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -92,6 +87,7 @@ export function Composer() {
     e.preventDefault();
     dragCounter.current = 0;
     setDragOver(false);
+    // Multi-file: dataTransfer.files is a FileList; spread appends all of them.
     const dropped = Array.from(e.dataTransfer.files ?? []);
     if (dropped.length > 0) {
       setFiles((prev) => [...prev, ...dropped]);
@@ -135,31 +131,12 @@ export function Composer() {
           </div>
         )}
         <div className="flex gap-2 items-end">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 active:bg-zinc-300 text-zinc-700 rounded text-xl"
-            title="上传文档或图片"
-          >
-            📎
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept={ACCEPT}
-            className="hidden"
-            onChange={(e) => {
-              const selected = e.target.files ? [...e.target.files] : [];
-              setFiles((prev) => [...prev, ...selected]);
-            }}
-          />
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
-            placeholder="输入消息 · 可拖拽或粘贴文件/图片 · Enter 发送 · Shift+Enter 换行"
+            placeholder="输入消息 · 拖拽 / 粘贴文件或图片（支持批量）· Enter 发送 · Shift+Enter 换行"
             rows={2}
             className="flex-1 resize-none border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-zinc-500"
           />

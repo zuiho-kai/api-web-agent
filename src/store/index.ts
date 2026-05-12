@@ -21,6 +21,12 @@ import { db, uuid, type ConversationRow, type MessageRow } from '@/storage/db';
 import { loadSettings, removeProvider, saveSettings, upsertProvider, type AppSettings } from '@/storage/settings';
 import { LOCKED_PROVIDER } from '@/config';
 
+export interface UIUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+}
+
 export interface UIMessage {
   rowId: string;
   role: ChatMessage['role'];
@@ -30,6 +36,7 @@ export interface UIMessage {
   streaming?: boolean;
   toolExecs?: Record<string, { name: string; status: 'running' | 'done' | 'error'; result?: string; input?: Record<string, unknown> }>;
   thinking?: string;
+  usage?: UIUsage;
 }
 
 interface AppState {
@@ -276,6 +283,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     let accumulatedText = '';
     let accumulatedThinking = '';
+    const accumulatedUsage: UIUsage = {};
     const assistantBlocks: ChatContentBlock[] = [];
     const toolExecs: NonNullable<UIMessage['toolExecs']> = {};
 
@@ -320,6 +328,21 @@ export const useStore = create<AppState>((set, get) => ({
             toolExecs[id] = { ...prev, status: isError ? 'error' : 'done', result: content };
             updateAssistantUI(assistantRowId, currentText(assistantBlocks), toolExecs, accumulatedThinking, true);
           },
+          onUsage: (input, output, cached) => {
+            // Multiple usage events may arrive (message_start + message_delta).
+            // Keep the largest reported value for each field — final message
+            // usage always supersedes the initial one.
+            if (input !== undefined && input > (accumulatedUsage.inputTokens ?? 0)) {
+              accumulatedUsage.inputTokens = input;
+            }
+            if (output !== undefined && output > (accumulatedUsage.outputTokens ?? 0)) {
+              accumulatedUsage.outputTokens = output;
+            }
+            if (cached !== undefined && cached > (accumulatedUsage.cachedTokens ?? 0)) {
+              accumulatedUsage.cachedTokens = cached;
+            }
+            updateAssistantUI(assistantRowId, currentText(assistantBlocks), toolExecs, accumulatedThinking, true);
+          },
           onError: (msg) => {
             accumulatedText += `\n\n[Error: ${msg}]`;
             updateAssistantUI(assistantRowId, accumulatedText, toolExecs, accumulatedThinking, true);
@@ -336,12 +359,22 @@ export const useStore = create<AppState>((set, get) => ({
           ? assistantBlocks[0].text
           : assistantBlocks;
       await replaceMessage(assistantRowId, { content: finalContent });
+      const hasUsage = accumulatedUsage.inputTokens !== undefined
+        || accumulatedUsage.outputTokens !== undefined
+        || accumulatedUsage.cachedTokens !== undefined;
       set((s) => ({
         isStreaming: false,
         abortController: null,
         messages: s.messages.map((m) =>
           m.rowId === assistantRowId
-            ? { ...m, content: finalContent, streaming: false, toolExecs, thinking: accumulatedThinking || undefined }
+            ? {
+                ...m,
+                content: finalContent,
+                streaming: false,
+                toolExecs,
+                thinking: accumulatedThinking || undefined,
+                usage: hasUsage ? { ...accumulatedUsage } : undefined,
+              }
             : m,
         ),
       }));
@@ -426,6 +459,7 @@ interface EventHandlers {
   onTextFinalized(): void;
   onToolExecStart(id: string, name: string, input: Record<string, unknown>): void;
   onToolExecDone(id: string, name: string, content: string, isError?: boolean): void;
+  onUsage(input?: number, output?: number, cached?: number): void;
   onError(msg: string): void;
 }
 
@@ -446,6 +480,9 @@ function handleAgentEvent(ev: AgentEvent, h: EventHandlers): void {
       break;
     case 'tool_exec_done':
       h.onToolExecDone(ev.id, ev.name, ev.content, ev.is_error);
+      break;
+    case 'usage':
+      h.onUsage(ev.input_tokens, ev.output_tokens, ev.cached_tokens);
       break;
     case 'error':
       h.onError(ev.message);

@@ -4,6 +4,7 @@ import { Header } from './ui/chat/Header';
 import { MessageList } from './ui/chat/MessageList';
 import { Composer } from './ui/chat/Composer';
 import { Sidebar } from './ui/chat/Sidebar';
+import { UsageBar } from './ui/chat/UsageBar';
 import { SettingsPanel } from './ui/settings/SettingsPanel';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
         <div className="flex-1 min-h-0">
           <MessageList />
         </div>
+        <UsageBar />
         <Composer />
       </main>
       <SettingsPanel />
