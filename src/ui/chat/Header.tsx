@@ -38,47 +38,20 @@ export function Header() {
             ))}
           </select>
         )}
-        <select
-          value={
-            PRESET_MODELS.some((m) => m.id === settings.activeModel)
-              ? settings.activeModel!
-              : '__custom__'
-          }
-          onChange={(e) => {
-            if (e.target.value === '__custom__') return;
-            updateSettings({ activeModel: e.target.value });
-          }}
-          className="border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
-        >
-          <optgroup label="Claude">
-            {PRESET_MODELS.filter((m) => m.family === 'claude').map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="GPT">
-            {PRESET_MODELS.filter((m) => m.family === 'gpt').map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Grok">
-            {PRESET_MODELS.filter((m) => m.family === 'grok').map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </optgroup>
-          <option value="__custom__">— 自定义（下方输入）—</option>
-        </select>
         <input
+          list="model-presets-header"
           value={settings.activeModel ?? ''}
           onChange={(e) => updateSettings({ activeModel: e.target.value || null })}
-          placeholder="或输入自定义 model"
-          className="border border-zinc-300 rounded px-2 py-1 text-xs w-44 font-mono"
+          placeholder="选 / 输入 model"
+          className="border border-zinc-300 rounded px-2 py-1 text-xs w-56 font-mono"
         />
+        <datalist id="model-presets-header">
+          {PRESET_MODELS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </datalist>
         <select
           value={settings.thinkingLevel}
           onChange={(e) => updateSettings({ thinkingLevel: e.target.value as ThinkingLevel })}

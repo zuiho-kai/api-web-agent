@@ -151,53 +151,23 @@ export function SettingsPanel() {
               </label>
               <label className="block text-xs">
                 <div className="text-zinc-600 mb-1">Model</div>
-                <div className="flex gap-2">
-                  <select
-                    value={
-                      PRESET_MODELS.some((m) => m.id === settings.activeModel)
-                        ? settings.activeModel!
-                        : '__custom__'
-                    }
-                    onChange={(e) => {
-                      if (e.target.value === '__custom__') return;
-                      updateSettings({ activeModel: e.target.value });
-                    }}
-                    className="border border-zinc-300 rounded px-2 py-1 text-sm font-mono"
-                  >
-                    <optgroup label="Claude">
-                      {PRESET_MODELS.filter((m) => m.family === 'claude').map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="GPT">
-                      {PRESET_MODELS.filter((m) => m.family === 'gpt').map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Grok">
-                      {PRESET_MODELS.filter((m) => m.family === 'grok').map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <option value="__custom__">— 自定义 —</option>
-                  </select>
-                  <input
-                    value={settings.activeModel ?? ''}
-                    onChange={(e) => updateSettings({ activeModel: e.target.value || null })}
-                    placeholder="或自定义 model 名"
-                    className="flex-1 border border-zinc-300 rounded px-2 py-1 text-sm font-mono"
-                  />
-                </div>
+                <input
+                  list="model-presets-settings"
+                  value={settings.activeModel ?? ''}
+                  onChange={(e) => updateSettings({ activeModel: e.target.value || null })}
+                  placeholder="选预设或输入任意 model 名"
+                  className="w-full border border-zinc-300 rounded px-2 py-1 text-sm font-mono"
+                />
+                <datalist id="model-presets-settings">
+                  {PRESET_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </datalist>
               </label>
               <p className="text-xs text-zinc-400">
-                左侧下拉选预设模型，或在右侧输入自定义 model 名。
-                以 <code>claude-</code> 开头自动走 Anthropic 协议，其余走 OpenAI 协议。
+                点 input 选预设或自由输入。以 <code>claude-</code> 开头自动走 Anthropic 协议，其余走 OpenAI 协议。
               </p>
             </div>
           </section>

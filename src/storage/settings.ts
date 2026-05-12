@@ -15,7 +15,7 @@ const DEFAULTS: AppSettings = {
   activeProviderId: null,
   activeModel: null,
   modeId: 'chat',
-  thinkingLevel: 'off',
+  thinkingLevel: 'high',
 };
 
 export function loadSettings(): AppSettings {
