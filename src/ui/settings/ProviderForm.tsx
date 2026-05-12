@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ProviderConfig, ProviderProtocol } from '@/providers/base';
 import { uuid } from '@/storage/db';
+import { LOCKED_PROVIDER } from '@/config';
 
 interface Props {
   initial?: ProviderConfig;
@@ -9,12 +10,27 @@ interface Props {
 }
 
 export function ProviderForm({ initial, onSave, onCancel }: Props) {
+  const isLocked = LOCKED_PROVIDER.enabled && initial?.id === LOCKED_PROVIDER.id;
+
   const [name, setName] = useState(initial?.name ?? '');
   const [baseURL, setBaseURL] = useState(initial?.baseURL ?? '');
   const [apiKey, setApiKey] = useState(initial?.apiKey ?? '');
   const [protocol, setProtocol] = useState<ProviderProtocol | ''>(initial?.protocol ?? '');
 
   function save() {
+    if (isLocked) {
+      if (!apiKey.trim()) {
+        alert('请填写 API Key');
+        return;
+      }
+      onSave({
+        id: LOCKED_PROVIDER.id,
+        name: LOCKED_PROVIDER.name,
+        baseURL: LOCKED_PROVIDER.baseURL,
+        apiKey: apiKey.trim(),
+      });
+      return;
+    }
     if (!name.trim() || !baseURL.trim() || !apiKey.trim()) {
       alert('请填写 name / baseURL / apiKey');
       return;
@@ -32,18 +48,20 @@ export function ProviderForm({ initial, onSave, onCancel }: Props) {
     <div className="border border-zinc-200 rounded p-3 space-y-2">
       <Field label="名称">
         <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={isLocked ? LOCKED_PROVIDER.name : name}
+          onChange={(e) => !isLocked && setName(e.target.value)}
+          disabled={isLocked}
           placeholder="例如：My Proxy"
-          className="w-full border border-zinc-300 rounded px-2 py-1 text-sm"
+          className="w-full border border-zinc-300 rounded px-2 py-1 text-sm disabled:bg-zinc-50 disabled:text-zinc-500"
         />
       </Field>
       <Field label="Base URL">
         <input
-          value={baseURL}
-          onChange={(e) => setBaseURL(e.target.value)}
+          value={isLocked ? LOCKED_PROVIDER.baseURL : baseURL}
+          onChange={(e) => !isLocked && setBaseURL(e.target.value)}
+          disabled={isLocked}
           placeholder="https://api.openai.com 或 https://api.anthropic.com"
-          className="w-full border border-zinc-300 rounded px-2 py-1 text-sm font-mono"
+          className="w-full border border-zinc-300 rounded px-2 py-1 text-sm font-mono disabled:bg-zinc-50 disabled:text-zinc-500"
         />
       </Field>
       <Field label="API Key">
@@ -55,17 +73,24 @@ export function ProviderForm({ initial, onSave, onCancel }: Props) {
           className="w-full border border-zinc-300 rounded px-2 py-1 text-sm font-mono"
         />
       </Field>
-      <Field label="协议（可选）">
-        <select
-          value={protocol}
-          onChange={(e) => setProtocol(e.target.value as ProviderProtocol | '')}
-          className="w-full border border-zinc-300 rounded px-2 py-1 text-sm"
-        >
-          <option value="">自动（按 model 名）</option>
-          <option value="openai">OpenAI /v1/chat/completions</option>
-          <option value="anthropic">Anthropic /v1/messages</option>
-        </select>
-      </Field>
+      {!isLocked && (
+        <Field label="协议（可选）">
+          <select
+            value={protocol}
+            onChange={(e) => setProtocol(e.target.value as ProviderProtocol | '')}
+            className="w-full border border-zinc-300 rounded px-2 py-1 text-sm"
+          >
+            <option value="">自动（按 model 名）</option>
+            <option value="openai">OpenAI /v1/chat/completions</option>
+            <option value="anthropic">Anthropic /v1/messages</option>
+          </select>
+        </Field>
+      )}
+      {isLocked && (
+        <p className="text-xs text-zinc-500">
+          此 provider 已被部署锁定，只能填写自己的 API Key。
+        </p>
+      )}
       <div className="flex gap-2 pt-2">
         <button
           type="button"

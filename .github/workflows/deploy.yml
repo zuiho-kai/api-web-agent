@@ -23,7 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Build
+      - name: Build (with lock-provider env from secrets)
+        env:
+          # When these secrets are set on the repo, the deployed SPA boots
+          # in locked-provider mode. Public OSS clones without these env
+          # vars build in normal BYO-key mode.
+          VITE_LOCK_PROVIDER: ${{ secrets.LOCK_PROVIDER }}
+          VITE_LOCKED_BASE_URL: ${{ secrets.LOCKED_BASE_URL }}
+          VITE_LOCKED_PROVIDER_NAME: ${{ secrets.LOCKED_PROVIDER_NAME }}
         run: npm run build
 
       - name: Deploy dist/ to server (rsync over SSH)

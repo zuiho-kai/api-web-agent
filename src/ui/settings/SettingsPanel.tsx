@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '@/store';
 import type { ProviderConfig } from '@/providers/base';
 import { PRESET_MODELS } from '@/providers/preset-models';
+import { LOCKED_PROVIDER } from '@/config';
 import { ProviderForm } from './ProviderForm';
 
 export function SettingsPanel() {
@@ -37,22 +38,32 @@ export function SettingsPanel() {
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold">Providers</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setCreating(true);
-                  setEditing(null);
-                }}
-                className="text-xs px-2 py-1 bg-zinc-900 text-white rounded hover:bg-zinc-700"
-              >
-                + 新增
-              </button>
+              {!LOCKED_PROVIDER.enabled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreating(true);
+                    setEditing(null);
+                  }}
+                  className="text-xs px-2 py-1 bg-zinc-900 text-white rounded hover:bg-zinc-700"
+                >
+                  + 新增
+                </button>
+              )}
             </div>
-            <p className="text-xs text-zinc-500 mb-2">
-              API key 存在 LocalStorage（明文）。清除站点数据即丢失。
-            </p>
+            {LOCKED_PROVIDER.enabled ? (
+              <p className="text-xs text-zinc-500 mb-2">
+                此部署锁定到 <span className="font-mono">{LOCKED_PROVIDER.name}</span>。
+                只能填写自己的 API key，不能更改 Base URL 或添加其他 provider。
+                Key 存在 LocalStorage（明文，仅你的浏览器）。
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-500 mb-2">
+                API key 存在 LocalStorage（明文）。清除站点数据即丢失。
+              </p>
+            )}
 
-            {creating && (
+            {creating && !LOCKED_PROVIDER.enabled && (
               <div className="mb-3">
                 <ProviderForm
                   onSave={(p) => {
@@ -102,15 +113,17 @@ export function SettingsPanel() {
                       >
                         编辑
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm(`删除 ${p.name}？`)) removeP(p.id);
-                        }}
-                        className="text-xs px-2 py-1 hover:bg-red-50 text-red-600 rounded"
-                      >
-                        删除
-                      </button>
+                      {!LOCKED_PROVIDER.enabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`删除 ${p.name}？`)) removeP(p.id);
+                          }}
+                          className="text-xs px-2 py-1 hover:bg-red-50 text-red-600 rounded"
+                        >
+                          删除
+                        </button>
+                      )}
                     </div>
                   </div>
                 ),

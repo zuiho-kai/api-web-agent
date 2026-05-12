@@ -19,6 +19,7 @@ import {
 } from '@/storage/conversations';
 import { db, uuid, type ConversationRow, type MessageRow } from '@/storage/db';
 import { loadSettings, removeProvider, saveSettings, upsertProvider, type AppSettings } from '@/storage/settings';
+import { LOCKED_PROVIDER } from '@/config';
 
 export interface UIMessage {
   rowId: string;
@@ -65,6 +66,27 @@ export const useStore = create<AppState>((set, get) => ({
   settingsOpen: false,
 
   async init() {
+    // Enforce locked-provider mode if the build was configured for it.
+    // The single locked provider replaces any user-saved providers; we
+    // preserve the apiKey field if the user has already entered one.
+    if (LOCKED_PROVIDER.enabled) {
+      const s = get().settings;
+      const prev = s.providers.find((p) => p.id === LOCKED_PROVIDER.id);
+      const locked: ProviderConfig = {
+        id: LOCKED_PROVIDER.id,
+        name: LOCKED_PROVIDER.name,
+        baseURL: LOCKED_PROVIDER.baseURL,
+        apiKey: prev?.apiKey ?? '',
+      };
+      const next: AppSettings = {
+        ...s,
+        providers: [locked],
+        activeProviderId: LOCKED_PROVIDER.id,
+      };
+      saveSettings(next);
+      set({ settings: next });
+    }
+
     const convs = await listConversations();
     set({ conversations: convs });
     if (convs.length > 0 && !get().activeId) {
@@ -362,12 +384,28 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addOrUpdateProvider(p) {
+    // In locked mode, only allow editing apiKey of the locked provider.
+    if (LOCKED_PROVIDER.enabled) {
+      if (p.id !== LOCKED_PROVIDER.id) return;
+      const s = get().settings;
+      const locked: ProviderConfig = {
+        id: LOCKED_PROVIDER.id,
+        name: LOCKED_PROVIDER.name,
+        baseURL: LOCKED_PROVIDER.baseURL,
+        apiKey: p.apiKey,
+      };
+      const next: AppSettings = { ...s, providers: [locked] };
+      saveSettings(next);
+      set({ settings: next });
+      return;
+    }
     const next = upsertProvider(get().settings, p);
     saveSettings(next);
     set({ settings: next });
   },
 
   removeProviderById(id) {
+    if (LOCKED_PROVIDER.enabled) return;
     const next = removeProvider(get().settings, id);
     saveSettings(next);
     set({ settings: next });

@@ -2,6 +2,7 @@ import { useStore } from '@/store';
 import { detectProtocol } from '@/providers/router';
 import { PRESET_MODELS } from '@/providers/preset-models';
 import { THINKING_LEVELS, type ThinkingLevel } from '@/providers/base';
+import { LOCKED_PROVIDER } from '@/config';
 
 export function Header() {
   const settings = useStore((s) => s.settings);
@@ -16,18 +17,27 @@ export function Header() {
     <header className="border-b border-zinc-200 bg-white px-4 py-2 flex items-center justify-between">
       <div className="text-sm font-semibold">api-web-agent</div>
       <div className="flex items-center gap-2 text-xs">
-        <select
-          value={settings.activeProviderId ?? ''}
-          onChange={(e) => updateSettings({ activeProviderId: e.target.value || null })}
-          className="border border-zinc-300 rounded px-2 py-1 text-xs"
-        >
-          <option value="">— Provider —</option>
-          {settings.providers.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        {LOCKED_PROVIDER.enabled ? (
+          <span
+            className="px-2 py-1 rounded bg-zinc-100 text-zinc-600"
+            title={LOCKED_PROVIDER.baseURL}
+          >
+            🔒 {LOCKED_PROVIDER.name}
+          </span>
+        ) : (
+          <select
+            value={settings.activeProviderId ?? ''}
+            onChange={(e) => updateSettings({ activeProviderId: e.target.value || null })}
+            className="border border-zinc-300 rounded px-2 py-1 text-xs"
+          >
+            <option value="">— Provider —</option>
+            {settings.providers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={
             PRESET_MODELS.some((m) => m.id === settings.activeModel)
