@@ -1,106 +1,108 @@
 # api-web-agent
 
-> A 0-backend, BYO-key, multi-provider AI agent platform that runs entirely in your browser.
+> 0 后端、自带 API key、多 provider 的浏览器侧 AI Agent 平台。
 
-Connect to any OpenAI-compatible or Anthropic-native endpoint, give the model real tools (web search, web fetch, document reading), and watch it think and act — all without sending your API keys to anyone but the LLM provider you choose.
+**中文** · [English](./README.en.md)
+
+接任意 OpenAI 兼容或 Anthropic 原生接口，给模型真实工具（联网搜索、抓网页、读文档），看它思考 + 执行——你的 API key 只在你浏览器里，只发给你自己选的 LLM provider。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
 
-## Highlights
+## 亮点
 
-- **Dual adapter with auto-routing**: model names starting with `claude-*` route to the Anthropic `/v1/messages` protocol (native tool_use SSE, prompt caching with `cache_control`, extended thinking budget). Everything else (`gpt-*`, `grok-*`, `deepseek-*`, `kimi-*`, `qwen-*`, …) routes to the OpenAI `/v1/chat/completions` protocol (`tool_calls.delta` accumulation, `reasoning_effort` including the Codex `xhigh` extension).
-- **Client-side function calling** — your tools, your runtime. No dependency on provider-hosted tools or vendor-specific APIs.
-- **Built-in tools (zero external API keys required)**:
-  - `web_search` — Jina Reader + DuckDuckGo HTML
-  - `web_fetch` — Jina Reader
-  - Document upload: PDF (pdf.js), DOCX (mammoth), XLSX (SheetJS), all parsed in-browser.
-- **Streaming UI** with Markdown + code highlight, tool-call cards, and a collapsible thinking panel that streams the model's reasoning in real time.
-- **5-level thinking control** (关闭/低/中/高/超高) unified across Anthropic `budget_tokens` and OpenAI `reasoning_effort`.
-- **Prompt caching pattern** baked into the Anthropic adapter (3-breakpoint Claude-Code-style: system / tools tail / messages tail).
-- **Persistence**: IndexedDB (conversations + messages + attachments) via Dexie, LocalStorage (provider configs + active model + thinking level).
-- **Deploy anywhere static**: Cloudflare Pages, Vercel, GitHub Pages, Netlify, or a plain S3 bucket.
+- **双 adapter + 自动路由**：model 名前缀 `claude-*` 走 Anthropic `/v1/messages`（原生 tool_use SSE、`cache_control` 缓存、extended thinking budget）；其余（`gpt-*` / `grok-*` / `deepseek-*` / `kimi-*` / `qwen-*` ...）走 OpenAI `/v1/chat/completions`（`tool_calls.delta` 累积、`reasoning_effort` 含 Codex 扩展 `xhigh`）。
+- **客户端 function calling** —— 工具实现完全在你浏览器里，不依赖各家 hosted tools。
+- **内置 3 类工具，零额外 key**：
+  - `web_search` —— Jina Reader + DuckDuckGo HTML
+  - `web_fetch` —— Jina Reader
+  - 文档上传：PDF（pdf.js）/ DOCX（mammoth）/ XLSX（SheetJS），浏览器侧解析
+- **流式 UI**：Markdown + 代码高亮、工具调用卡片、可折叠的思考过程面板（实时显示模型推理）。
+- **5 档思考等级**（关闭/低/中/高/超高），自动翻译成 Anthropic `budget_tokens` 或 OpenAI `reasoning_effort`。
+- **Anthropic prompt caching** 3-breakpoint pattern（system / tools 末尾 / messages 末尾），跟 Claude Code 一致。
+- **持久化**：IndexedDB（会话 + 消息 + 附件，Dexie 封装）+ LocalStorage（provider 配置 + 当前 model + 思考等级）。
+- **部署到任何静态托管**：Cloudflare Pages / Vercel / GitHub Pages / Netlify / S3。
 
-## Quick start
+## 快速开始
 
 ```bash
-git clone <repo-url> api-web-agent
+git clone https://github.com/zuiho-kai/api-web-agent.git
 cd api-web-agent
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173/`. The settings panel opens automatically on first launch — add at least one provider:
+打开 `http://localhost:5173/`。首次启动会自动弹出设置面板，至少添加一个 provider：
 
-| Field | Example |
+| 字段 | 例 |
 |---|---|
-| **Name** | `My OpenAI` |
-| **Base URL** | `https://api.openai.com` (or any OpenAI-compatible / Anthropic-native endpoint, no trailing `/v1`) |
+| **名称** | `My OpenAI` |
+| **Base URL** | `https://api.openai.com`（或任意 OpenAI 兼容 / Anthropic 原生接口，不含 `/v1`）|
 | **API Key** | `sk-…` |
-| **Protocol** | Auto (recommended) — let the model-name prefix decide |
+| **协议** | 自动（推荐）—— 由 model 名前缀决定 |
 
-Then pick a model from the preset dropdown (Claude 4.6/4.7, GPT-5.x, Grok-4.x) or type any custom model name. Start chatting.
+然后在顶部下拉里选预设 model（Claude 4.6/4.7、GPT-5.x、Grok-4.x）或手输任意 model 名。开始对话。
 
-## Built-in model presets
+## 内置模型预设
 
-| Family | Models |
+| 家族 | Models |
 |---|---|
-| Claude | Opus 4.7 / 4.6 (+ thinking) · Sonnet 4.6 (+ thinking) · Haiku 4.5 |
+| Claude | Opus 4.7 / 4.6（+ thinking）· Sonnet 4.6（+ thinking）· Haiku 4.5 |
 | GPT    | GPT-5.5 · GPT-5.4 · GPT-5.3 Codex |
-| Grok   | Grok 4 · Grok 4 Heavy · Grok 4 (thinking) · Grok 4.1 Fast |
+| Grok   | Grok 4 · Grok 4 Heavy · Grok 4（thinking）· Grok 4.1 Fast |
 
-Custom model names work too — just type any string and the adapter routes by prefix.
+自定义 model 名也行——输任意字符串，adapter 按前缀自动路由。
 
-## Architecture
+## 架构
 
 ```
-React UI ── Zustand store ── Agent loop ─┬─ Anthropic adapter  (/v1/messages)
-                                         └─ OpenAI adapter     (/v1/chat/completions)
+React UI ── Zustand store ── Agent loop ─┬─ Anthropic adapter (/v1/messages)
+                                         └─ OpenAI adapter    (/v1/chat/completions)
 
-Tools (client-side)         Storage
-├── web_search (Jina+DDG)   ├── IndexedDB (Dexie): conversations, messages, attachments
-├── web_fetch  (Jina)       └── LocalStorage: settings + API keys
-└── doc parsers (pdf/docx/xlsx, browser-side)
+工具（客户端）              存储
+├── web_search (Jina+DDG)   ├── IndexedDB (Dexie): 会话 / 消息 / 附件
+├── web_fetch  (Jina)       └── LocalStorage: 设置 + API key
+└── 文档解析（pdf/docx/xlsx 浏览器侧）
 ```
 
-## Build & deploy
+## 构建 & 部署
 
 ```bash
-npm run build      # outputs to dist/
-npm run preview    # serve dist/ locally
+npm run build      # 输出到 dist/
+npm run preview    # 本地预览构建产物
 npm run typecheck
 ```
 
-The `public/_headers` file sets `Cross-Origin-Embedder-Policy: require-corp` + `Cross-Origin-Opener-Policy: same-origin` for Cloudflare Pages, preparing the ground for future WebContainers support.
+`public/_headers` 文件预设了 `Cross-Origin-Embedder-Policy: require-corp` + `Cross-Origin-Opener-Policy: same-origin`（为后续 WebContainers 集成预留）。Cloudflare Pages / Vercel 等托管会自动识别。
 
-## Testing
+## 测试
 
 ```bash
-cp .env.example .env       # then fill in PROXY_BASE_URL + two keys
-npm test                   # 21 real-API end-to-end tests
+cp .env.example .env       # 填好 PROXY_BASE_URL + 两个 key
+npm test                   # 21 个真实 API 端到端测试
 ```
 
-Tests hit real provider endpoints (no mocks). They cover:
+测试不 mock 任何外部调用，覆盖：
 
-- Router model-name → protocol detection
-- SSE parsing (Anthropic event/data + OpenAI data-only)
-- Adapter tool-call accumulation
-- Web search tool real fetch
-- Agent loop end-to-end (e.g. "What's the weather in Tokyo?")
-- Multi-turn context retention across 3 protocol paths
-- Long-context fact extraction from a ~4KB document
-- Prompt caching `cache_read` measurement
-- Thinking budget sweep + `reasoning_effort` including `xhigh`
+- Router model 名 → 协议路由
+- SSE 解析（Anthropic event/data + OpenAI data-only）
+- Adapter tool 调用累积
+- Web search 工具真实 fetch
+- Agent loop 端到端（如「今天东京天气怎么样」）
+- 多轮上下文保留（3 条协议路径）
+- 长上下文从 4KB 文档中提取 6 个事实
+- Prompt caching `cache_read` 实测
+- Thinking budget sweep + `reasoning_effort` 含 `xhigh`
 
-## Privacy / security model
+## 隐私 / 安全模型
 
-- **Your API keys live only in your browser's LocalStorage** (plaintext). Clearing site data deletes them. They're sent only to the endpoint you configured — never to any other server.
-- **No backend**, no analytics, no telemetry. Static site through and through.
-- Documents you upload are parsed in your browser and embedded inline into the next message. The original bytes can also be persisted to OPFS (Origin Private File System) for re-use across sessions.
-- The dev server sends COOP/COEP headers but the production build is otherwise plain static HTML/JS.
+- **你的 API key 只存在浏览器 LocalStorage**（明文）。清除站点数据即失。仅发送给你配置的 endpoint，不会发到任何其它服务器。
+- **无后端**、无埋点、无 telemetry。纯静态站。
+- 上传的文档在你浏览器里解析后内联到下一条消息。原始字节可选持久化到 OPFS（Origin Private File System），跨会话复用。
+- dev server 会发 COOP/COEP headers，生产构建是纯静态 HTML/JS。
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT —— 见 [LICENSE](./LICENSE)
